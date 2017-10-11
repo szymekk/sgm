@@ -51,8 +51,8 @@ int main(int argc, const char* argv[]) {
             }
             std::cout << "\n";
 
-            auto image_grey = rgb_to_grey_image(image_RGB);
-            for (const auto& pixel : image_grey.data) {
+            auto image_gray = rgb_to_gray_image(image_RGB);
+            for (const auto& pixel : image_gray.data) {
                 std::cout << +pixel.value << ", ";
             }
             std::cout << "\n";

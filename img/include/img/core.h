@@ -25,7 +25,7 @@ struct Grid {
 };
 
 template <typename ChannelT>
-struct PixelGrey {
+struct PixelGray {
     ChannelT value;
 };
 
@@ -37,23 +37,23 @@ struct PixelRGB {
 };
 
 template <typename ChannelT>
-using ImageGrey = Grid<PixelGrey<ChannelT>>;
+using ImageGray = Grid<PixelGray<ChannelT>>;
 
 template <typename ChannelT>
 using ImageRGB = Grid<PixelRGB<ChannelT>>;
 
 template <typename ChannelT>
-ImageGrey<ChannelT> rgb_to_grey_image(const ImageRGB<ChannelT>& rgb_image) {
+ImageGray<ChannelT> rgb_to_gray_image(const ImageRGB<ChannelT>& rgb_image) {
 
-    ImageGrey<ChannelT> grey_image(rgb_image.width, rgb_image.height);
+    ImageGray<ChannelT> gray_image(rgb_image.width, rgb_image.height);
 
-    auto rgb_to_grey_pixel = [](const PixelRGB<ChannelT>& pixel) {
-        return PixelGrey<ChannelT>{static_cast<ChannelT>((pixel.red + pixel.green + pixel.blue) / 3 )};
+    auto rgb_to_gray_pixel = [](const PixelRGB<ChannelT>& pixel) {
+        return PixelGray<ChannelT>{static_cast<ChannelT>((pixel.red + pixel.green + pixel.blue) / 3 )};
     };
-    std::transform(rgb_image.data.cbegin(), rgb_image.data.cend(), grey_image.data.begin(),
-            rgb_to_grey_pixel);
+    std::transform(rgb_image.data.cbegin(), rgb_image.data.cend(), gray_image.data.begin(),
+            rgb_to_gray_pixel);
 
-    return grey_image;
+    return gray_image;
 }
 
 } // namespace img
