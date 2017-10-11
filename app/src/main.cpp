@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <cstdint>
-#include <c++/7.2.0/cstring>
 
 #include "img/core.h"
 #include "img/fileio.h"
@@ -51,6 +50,13 @@ int main(int argc, const char* argv[]) {
                 std::cout << +pixel.blue  << "}, ";
             }
             std::cout << "\n";
+
+            auto image_grey = rgb_to_grey_image(image_RGB);
+            for (const auto& pixel : image_grey.data) {
+                std::cout << +pixel.value << ", ";
+            }
+            std::cout << "\n";
+
             if(argc == 3) {
                 const std::string out_filename = argv[2];
                 std::cout << "saving output to: " << out_filename << "\n";

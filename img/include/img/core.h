@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <vector>
+#include <algorithm>
 
 namespace img {
 
@@ -40,6 +41,20 @@ using ImageGrey = Grid<PixelGrey<ChannelT>>;
 
 template <typename ChannelT>
 using ImageRGB = Grid<PixelRGB<ChannelT>>;
+
+template <typename ChannelT>
+ImageGrey<ChannelT> rgb_to_grey_image(const ImageRGB<ChannelT>& rgb_image) {
+
+    ImageGrey<ChannelT> grey_image(rgb_image.width, rgb_image.height);
+
+    auto rgb_to_grey_pixel = [](const PixelRGB<ChannelT>& pixel) {
+        return PixelGrey<ChannelT>{static_cast<ChannelT>((pixel.red + pixel.green + pixel.blue) / 3 )};
+    };
+    std::transform(rgb_image.data.cbegin(), rgb_image.data.cend(), grey_image.data.begin(),
+            rgb_to_grey_pixel);
+
+    return grey_image;
+}
 
 } // namespace img
 
