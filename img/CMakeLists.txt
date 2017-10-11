@@ -1,7 +1,12 @@
 project(img LANGUAGES CXX)
 
+# for CLion to recognize as project files
+file(GLOB IMG_HEADERS
+        include/img/*.h)
+
 add_library(img
-        src/fileio.cpp)
+        src/fileio.cpp
+        ${IMG_HEADERS})
 
 target_include_directories(img
         PUBLIC
