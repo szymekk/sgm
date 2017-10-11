@@ -1,7 +1,16 @@
 #ifndef IMG_FILEIO_H
 #define IMG_FILEIO_H
 
+#include <optional>
+#include <istream>
+
+#include "img/core.h"
+
 namespace img {
+
+std::optional< ImageRGB< std::uint8_t > > make_rgb_image_from_ppm(const std::string& filename);
+
+void write_rgb_image_to_ppm(ImageRGB < std::uint8_t >& image, const std::string& filename);
 
 } // namespace img
 
