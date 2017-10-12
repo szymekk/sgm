@@ -53,12 +53,12 @@ std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(s
         return {};
     }
 
-    img::ImageRGB<std::uint8_t> imageRGB(width, height);
+    img::ImageRGB<std::uint8_t> image_rgb(width, height);
 
     std::istreambuf_iterator<char> file_it(input_file), file_end;
 
-    auto img_it = imageRGB.data.begin();
-    auto img_end = imageRGB.data.cend();
+    auto img_it = image_rgb.data.begin();
+    auto img_end = image_rgb.data.cend();
 
     for (; img_it != img_end && file_it != file_end; ++img_it, ++file_it) {
         const auto r = static_cast<std::uint8_t>(*file_it);
@@ -80,7 +80,7 @@ std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(s
         img_it->blue  = b;
     }
 
-    return imageRGB;
+    return image_rgb;
 }
 
 std::optional< img::ImageGray< std::uint8_t > > make_gray_image_from_pgm_fstream(std::istream &input_file) {
@@ -111,19 +111,19 @@ std::optional< img::ImageGray< std::uint8_t > > make_gray_image_from_pgm_fstream
         return {};
     }
 
-    img::ImageGray<std::uint8_t> imageGray(width, height);
+    img::ImageGray<std::uint8_t> image_gray(width, height);
 
     std::istreambuf_iterator<char> file_it(input_file), file_end;
 
-    auto img_it = imageGray.data.begin();
-    auto img_end = imageGray.data.cend();
+    auto img_it = image_gray.data.begin();
+    auto img_end = image_gray.data.cend();
 
     for (; img_it != img_end && file_it != file_end; ++img_it, ++file_it) {
         const auto val = static_cast<std::uint8_t>(*file_it);
         img_it->value = val;
     }
 
-    return imageGray;
+    return image_gray;
 }
 
 } // namespace

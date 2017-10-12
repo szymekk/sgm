@@ -25,16 +25,16 @@ int main(int argc, const char* argv[]) {
         std::cout << "\n";
     }
 
-    std::optional<img::ImageRGB<std::uint8_t>>  maybe_image_RGB;
-    std::optional<img::ImageGray<std::uint8_t>> maybe_image_gray_from_RGB;
+    std::optional<img::ImageRGB<std::uint8_t>>  maybe_image_rgb;
+    std::optional<img::ImageGray<std::uint8_t>> maybe_image_gray_from_rgb;
     std::optional<img::ImageGray<std::uint8_t>> maybe_image_gray;
 
     if (argc >= 2) {
         const std::string in_basename = argv[1];
         const std::string in_file_ppm = in_basename + ".ppm";
-        if (maybe_image_RGB = img::make_rgb_image_from_ppm(in_file_ppm)) {
-            auto& image_RGB = maybe_image_RGB.value();
-            for (const auto& pixel : image_RGB.data) {
+        if (maybe_image_rgb = img::make_rgb_image_from_ppm(in_file_ppm)) {
+            auto& image_rgb = maybe_image_rgb.value();
+            for (const auto& pixel : image_rgb.data) {
                 std::cout << "{";
                 std::cout << +pixel.red   << ", "; //plus to display integer value
                 std::cout << +pixel.green << ", ";
@@ -42,14 +42,14 @@ int main(int argc, const char* argv[]) {
             }
             std::cout << "\n";
 
-            image_RGB.data[0].red   = 255;
-            image_RGB.data[0].green = 0;
-            image_RGB.data[0].blue  = 0;
+            image_rgb.data[0].red   = 255;
+            image_rgb.data[0].green = 0;
+            image_rgb.data[0].blue  = 0;
 
-            image_RGB.data[1] = {255, 255, 255};
+            image_rgb.data[1] = {255, 255, 255};
 
-            maybe_image_gray_from_RGB = rgb_to_gray_image(image_RGB);
-            for (const auto& pixel : maybe_image_gray_from_RGB->data) {
+            maybe_image_gray_from_rgb = rgb_to_gray_image(image_rgb);
+            for (const auto& pixel : maybe_image_gray_from_rgb->data) {
                 std::cout << +pixel.value << ", ";
             }
             std::cout << "\n";
@@ -74,15 +74,15 @@ int main(int argc, const char* argv[]) {
             const std::string out_basename = argv[2];
 
             const std::string out_file_ppm = out_basename + ".ppm";
-            if (maybe_image_RGB) {
+            if (maybe_image_rgb) {
                 std::cout << "saving RGB to: " << out_file_ppm << "\n";
-                img::write_rgb_image_to_ppm(maybe_image_RGB.value(), out_file_ppm);
+                img::write_rgb_image_to_ppm(maybe_image_rgb.value(), out_file_ppm);
             }
 
             const std::string out_file_modified_rgb_pgm = out_basename + ".modified" + ".pgm";
-            if (maybe_image_gray_from_RGB) {
+            if (maybe_image_gray_from_rgb) {
                 std::cout << "saving modified RGB as grayscale to: " << out_file_modified_rgb_pgm << "\n";
-                img::write_gray_image_to_pgm(maybe_image_gray_from_RGB.value(), out_file_modified_rgb_pgm);
+                img::write_gray_image_to_pgm(maybe_image_gray_from_rgb.value(), out_file_modified_rgb_pgm);
             }
 
             const std::string out_file_pgm = out_basename + ".pgm";
