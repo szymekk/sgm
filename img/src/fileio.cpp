@@ -16,6 +16,15 @@ void write_rgb_image_to_ppm_fstream(img::ImageRGB<std::uint8_t> &image, std::ofs
     }
 }
 
+void write_gray_image_to_pgm_fstream(img::ImageGray<std::uint8_t> &image, std::ofstream &output_file) {
+    output_file << "P5\n";
+    output_file << image.width << " " << image.height << "\n";
+    output_file << "255\n"; // max value
+    for (const auto &pixel : image.data) {
+        output_file << static_cast<char>(pixel.value);
+    }
+}
+
 std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(std::istream &input_file) {
     //check file type
     if ('P' != input_file.get()) {
@@ -74,6 +83,49 @@ std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(s
     return imageRGB;
 }
 
+std::optional< img::ImageGray< std::uint8_t > > make_gray_image_from_pgm_fstream(std::istream &input_file) {
+    //check file type
+    if ('P' != input_file.get()) {
+        std::cerr << "invalid header";
+        return {};
+    }
+    if ('5' != input_file.get()) {
+        std::cerr << "invalid header\n";
+        return {};
+    }
+
+    //get size
+    std::size_t width, height;
+    input_file >> width >> height;
+
+    if ('\n' != input_file.get()) {
+        std::cerr << "invalid header\n";
+        return {};
+    }
+
+    size_t max_value;
+    input_file >> max_value;
+
+    if ('\n' != input_file.get()) {
+        std::cerr << "invalid header\n";
+        return {};
+    }
+
+    img::ImageGray<std::uint8_t> imageGray(width, height);
+
+    std::istreambuf_iterator<char> file_it(input_file), file_end;
+
+    auto img_it = imageGray.data.begin();
+    auto img_end = imageGray.data.cend();
+
+    for (; img_it != img_end && file_it != file_end; ++img_it, ++file_it) {
+        const auto val = static_cast<std::uint8_t>(*file_it);
+        img_it->value = val;
+    }
+
+    return imageGray;
+}
+
 } // namespace
 
 namespace img {
@@ -88,9 +140,28 @@ std::optional< ImageRGB< std::uint8_t > > make_rgb_image_from_ppm(const std::str
     }
 }
 
+std::optional< ImageGray< std::uint8_t > > make_gray_image_from_pgm(const std::string &filename) {
+    if (auto input_file_stream = std::ifstream(filename, std::ios::in | std::ios::binary)) {
+        return make_gray_image_from_pgm_fstream(input_file_stream);
+    } else {
+        std::cerr << "is_open(): " << input_file_stream.is_open() << "\n";
+        std::cerr << "cannot read from file: " << filename << "\n";
+        return {};
+    }
+}
+
 void write_rgb_image_to_ppm(ImageRGB<std::uint8_t> &image, const std::string &filename) {
     if (auto output_file = std::ofstream(filename, std::ios::out | std::ios::binary)) {
         write_rgb_image_to_ppm_fstream(image, output_file);
+        output_file.close();
+    } else {
+        std::cerr << "could not open file: " << filename << "for writing\n";
+    }
+}
+
+void write_gray_image_to_pgm(ImageGray<std::uint8_t> &image, const std::string &filename) {
+    if (auto output_file = std::ofstream(filename, std::ios::out | std::ios::binary)) {
+        write_gray_image_to_pgm_fstream(image, output_file);
         output_file.close();
     } else {
         std::cerr << "could not open file: " << filename << "for writing\n";
