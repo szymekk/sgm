@@ -15,3 +15,9 @@ target_include_directories(img
         PRIVATE
             src)
 
+# test executables
+add_executable(testfileio
+        test/testfileio.cpp)
+
+target_link_libraries(testfileio
+        img)
