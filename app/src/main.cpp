@@ -13,9 +13,9 @@ int main(int argc, const char* argv[]) {
     img_8bit.data[1] = {'a','b','c'};
     img_8bit.data.back() = {'e','n','d'};
 
-    for(size_t r = 0; r < img_8bit.height; ++r) {
+    for(std::size_t r = 0; r < img_8bit.height; ++r) {
         std::cout << r << ":\t";
-        for(size_t c = 0; c < img_8bit.width; ++c) {
+        for(std::size_t c = 0; c < img_8bit.width; ++c) {
             const auto& cell = img_8bit.get(c, r);
             std::cout << "{";
             std::cout << cell.red   << ", ";

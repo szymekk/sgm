@@ -45,7 +45,7 @@ std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(s
         return {};
     }
 
-    size_t max_value;
+    std::size_t max_value;
     input_file >> max_value;
 
     if ('\n' != input_file.get()) {
@@ -103,7 +103,7 @@ std::optional< img::ImageGray< std::uint8_t > > make_gray_image_from_pgm_fstream
         return {};
     }
 
-    size_t max_value;
+    std::size_t max_value;
     input_file >> max_value;
 
     if ('\n' != input_file.get()) {
