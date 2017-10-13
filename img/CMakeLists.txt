@@ -6,7 +6,7 @@ file(GLOB IMG_HEADERS
 
 add_library(img
         src/fileio.cpp
-        ${IMG_HEADERS})
+        ${IMG_HEADERS} src/sgm.cpp)
 
 target_include_directories(img
         PUBLIC
@@ -20,4 +20,10 @@ add_executable(testfileio
         test/testfileio.cpp)
 
 target_link_libraries(testfileio
+        img)
+
+add_executable(testsgm
+        test/testsgm.cpp)
+
+target_link_libraries(testsgm
         img)

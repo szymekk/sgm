@@ -13,7 +13,13 @@ struct Grid {
             : width(cols), height(rows), data(width*height)
     {}
 
-    PixelT get(const std::size_t col, const std::size_t row) {
+    PixelT& get(const std::size_t col, const std::size_t row) {
+        assert(col < width);
+        assert(row < height);
+        return data.at(col + width*row);
+    }
+
+    const PixelT& get(const std::size_t col, const std::size_t row) const {
         assert(col < width);
         assert(row < height);
         return data.at(col + width*row);
