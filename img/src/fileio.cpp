@@ -5,7 +5,7 @@
 
 namespace {
 
-void write_rgb_image_to_ppm_fstream(img::ImageRGB<std::uint8_t> &image, std::ofstream &output_file) {
+void write_rgb_image_to_ppm_fstream(const img::ImageRGB<std::uint8_t> &image, std::ofstream &output_file) {
     output_file << "P6\n";
     output_file << image.width << " " << image.height << "\n";
     output_file << "255\n"; // max value
@@ -16,7 +16,7 @@ void write_rgb_image_to_ppm_fstream(img::ImageRGB<std::uint8_t> &image, std::ofs
     }
 }
 
-void write_gray_image_to_pgm_fstream(img::ImageGray<std::uint8_t> &image, std::ofstream &output_file) {
+void write_gray_image_to_pgm_fstream(const img::ImageGray<std::uint8_t> &image, std::ofstream &output_file) {
     output_file << "P5\n";
     output_file << image.width << " " << image.height << "\n";
     output_file << "255\n"; // max value
@@ -150,7 +150,7 @@ std::optional< ImageGray< std::uint8_t > > make_gray_image_from_pgm(const std::s
     }
 }
 
-void write_rgb_image_to_ppm(ImageRGB<std::uint8_t> &image, const std::string &filename) {
+void write_rgb_image_to_ppm(const ImageRGB<std::uint8_t> &image, const std::string &filename) {
     if (auto output_file = std::ofstream(filename, std::ios::out | std::ios::binary)) {
         write_rgb_image_to_ppm_fstream(image, output_file);
         output_file.close();
@@ -159,7 +159,7 @@ void write_rgb_image_to_ppm(ImageRGB<std::uint8_t> &image, const std::string &fi
     }
 }
 
-void write_gray_image_to_pgm(ImageGray<std::uint8_t> &image, const std::string &filename) {
+void write_gray_image_to_pgm(const ImageGray<std::uint8_t> &image, const std::string &filename) {
     if (auto output_file = std::ofstream(filename, std::ios::out | std::ios::binary)) {
         write_gray_image_to_pgm_fstream(image, output_file);
         output_file.close();
