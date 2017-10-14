@@ -12,8 +12,19 @@ using cost_value_t = std::uint8_t;
 using costs_vector_t = std::array<cost_value_t, MAX_DISPARITY>;
 const cost_value_t INVALID_COST = std::numeric_limits<cost_value_t>::max();
 
-std::uint8_t abs_diff(const std::uint8_t a, const std::uint8_t b) {
-    return static_cast<std::uint8_t>(a < b ? b - a : a - b);
+using accumulated_cost_value_t = std::uint16_t;
+using accumulated_costs_vector_t = std::array<accumulated_cost_value_t, MAX_DISPARITY>;
+
+const accumulated_cost_value_t PENALTY_1 = 15;
+const accumulated_cost_value_t PENALTY_2 = 100;
+
+// std::uint8_t abs_diff(const std::uint8_t a, const std::uint8_t b) {
+//     return static_cast<std::uint8_t>(a < b ? b - a : a - b);
+// }
+
+template<typename T>
+T abs_diff(const T a, const T b) {
+    return static_cast<T>(a < b ? b - a : a - b);
 }
 
 using cost_function_t = cost_value_t (*)(
@@ -124,6 +135,78 @@ cost_value_t sum_of_absolute_differences_3(
     return sum_of_absolute_differences(left, right, row, col, disparity, 3);
 }
 
+accumulated_costs_vector_t
+compute_additional_cost(
+        const accumulated_costs_vector_t& previous,
+        const std::uint8_t intensity_change) {
+
+    using penalty_t = accumulated_cost_value_t;
+    const penalty_t penalty_2_tentative =
+        static_cast<penalty_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
+    const penalty_t penalty_2 = std::max(PENALTY_1, penalty_2_tentative);
+
+    accumulated_costs_vector_t additional_costs;
+    for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
+        auto additional_cost = std::numeric_limits<accumulated_cost_value_t>::max();
+        for (std::size_t d_p = 0; d_p < MAX_DISPARITY; ++d_p) {
+            const auto diff = abs_diff(d_p, d);
+            if (0 == diff) {
+                additional_cost = std::min(additional_cost, previous[d_p]);
+            } else if (1 == diff) {
+                additional_cost = std::min(additional_cost, static_cast<penalty_t>(previous[d_p]+PENALTY_1));
+            } else {
+                additional_cost = std::min(additional_cost, static_cast<penalty_t>(previous[d_p]+penalty_2));
+            }
+        }
+        additional_costs[d] = additional_cost;
+    }
+    return additional_costs;
+}
+
+// accumulated cost at location (c, r) is equal to the sum of three terms:
+// 1) initial cost at location (c, r)
+// 2) additional cost depending on:
+//    a) accumulated cost at previous location (c - 1, r),
+//    b) the absolute difference of intensity values at the current and previous locations
+// 3) negated value of the minimal element of term 2a
+img::Grid<accumulated_costs_vector_t>
+accumulate_costs_direction_x1_y0(
+        const img::ImageGray<std::uint8_t>& left,
+        const img::Grid<costs_vector_t>& costs) {
+
+    img::Grid<accumulated_costs_vector_t> accumulated_costs(costs.width, costs.height);
+    // (1) initialize accumulated costs with values from costs
+    std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(accumulated_costs.data),
+            [](const costs_vector_t& cv){
+                accumulated_costs_vector_t acc_cv;
+                std::copy(cv.begin(), cv.end(), std::begin(acc_cv));
+                return acc_cv;
+            });
+
+    for (std::size_t r = 0; r < accumulated_costs.height; ++r) {
+        for (std::size_t c = 1; c < accumulated_costs.width; ++c) {
+            // (2)
+            const auto intensity_change = abs_diff(left.get(c, r).value, left.get(c - 1, r).value);
+            const auto& previous = accumulated_costs.get(c - 1,r);
+            const auto additional_costs =
+                    compute_additional_cost(previous, intensity_change);
+            // accumulated_costs.get(c, r) += additional_costs;
+            auto& local = accumulated_costs.get(c, r);
+            std::transform(local.begin(), local.end(), additional_costs.begin(),
+                    local.begin(), std::plus<accumulated_cost_value_t>());
+
+            // (3) substract min_element of previous from each element of local
+            const auto min = *std::min_element(previous.begin(), previous.end());
+            for (auto& cost : local) {
+                // cost -= min;
+                cost = static_cast<accumulated_cost_value_t>(cost - min);
+            }
+        }
+    }
+
+    return accumulated_costs;
+}
+
 } // namespace
 
 namespace img {
@@ -136,21 +219,31 @@ semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::u
     // const auto costs = calculate_costs(left, right, pixelwise_absolute_difference);
     const auto costs = calculate_costs(left, right, sum_of_absolute_differences_3);
 
+    const auto accumulated_costs_x1_y0 = accumulate_costs_direction_x1_y0(left, costs);
+
     // ImageGray<std::uint8_t> min_cost_view(left.width, left.height);
     // std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
     //                [](const costs_vector_t& cv){
     //                    return PixelGray<std::uint8_t>{ *std::min_element(std::begin(cv), std::end(cv)) };
     //                });
 
-    static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY);
+    static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY, "disparity values might fit into the image");
     ImageGray<std::uint8_t> naive_disparity(left.width, left.height);
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
-               [](const costs_vector_t& cv){
-                   const costs_vector_t::const_iterator result = std::min_element(std::begin(cv), std::end(cv));
-                   return PixelGray<std::uint8_t>{ static_cast<std::uint8_t>(std::distance(std::begin(cv), result)) };
-               });
-    static_assert(MAX_DISPARITY == 64); for (auto& pixel : naive_disparity.data) {pixel.value = static_cast<std::uint8_t>(pixel.value * 4);};
+                [](const costs_vector_t& cv){
+                    const costs_vector_t::const_iterator result = std::min_element(std::begin(cv), std::end(cv));
+                    return PixelGray<std::uint8_t>{ static_cast<std::uint8_t>(std::distance(std::begin(cv), result)) };
+                });
+    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits"); for (auto& pixel : naive_disparity.data) {pixel.value = static_cast<std::uint8_t>(pixel.value * 4);};
 
-    return naive_disparity;
+    ImageGray<std::uint8_t> acc_disparity(left.width, left.height);
+    std::transform(std::cbegin(accumulated_costs_x1_y0.data), std::cend(accumulated_costs_x1_y0.data), std::begin(acc_disparity.data),
+                [](const auto& cv){
+                    const auto result = std::min_element(std::begin(cv), std::end(cv));
+                    return PixelGray<std::uint8_t>{ static_cast<std::uint8_t>(std::distance(std::begin(cv), result)) };
+                });
+    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits"); for (auto& pixel : acc_disparity.data) {pixel.value = static_cast<std::uint8_t>(pixel.value * 4);};
+
+    return acc_disparity;
 }
 } // namespace img
