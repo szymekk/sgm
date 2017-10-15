@@ -93,10 +93,10 @@ cost_value_t sum_of_absolute_differences(
 
 
     const std::size_t r_min = (row >= n) ? row - n : 0;
-    const std::size_t r_max = std::clamp(row + n, 0uL, left.height - 1);
+    const std::size_t r_max = std::clamp<std::size_t>(row + n, 0, left.height - 1);
 
     const std::size_t c_min = (col >= n) ? col - n : 0;
-    const std::size_t c_max = std::clamp(col + n, 0uL, left.width - 1);
+    const std::size_t c_max = std::clamp<std::size_t>(col + n, 0, left.width - 1);
 
     // std::cerr << "r(" << r_min << "-" << r_max << "), c(" << c_min << "-" << c_max << ")\n";
 
