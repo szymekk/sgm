@@ -70,22 +70,23 @@ cost_t pixelwise_absolute_difference(
     }
 }
 
+template<std::size_t WINDOW_SIZE>
 cost_t sum_of_absolute_differences(
         const img::ImageGray<std::uint8_t>& left,
         const img::ImageGray<std::uint8_t>& right,
         const std::size_t row,
         const std::size_t col,
-        const std::size_t disparity,
-        const std::size_t window_size) {
-    assert(window_size > 0);
+        const std::size_t disparity) {
+    static_assert(WINDOW_SIZE > 0, "window size should be positive");
+    static_assert(WINDOW_SIZE % 2 == 1, "window should be symmetrical");
 
-    const std::size_t n = (window_size - 1) / 2;
+    constexpr auto n = (WINDOW_SIZE - 1) / 2;
     unsigned int sum = 0;
     std::size_t valid_pixels = 0;
 
-    assert(
+    static_assert(
             std::numeric_limits<decltype(sum)>::max() >=
-            window_size * window_size * std::numeric_limits<cost_t>::max());
+            WINDOW_SIZE * WINDOW_SIZE * std::numeric_limits<cost_t>::max());
 
 
     const std::size_t r_min = (row >= n) ? row - n : 0;
@@ -120,15 +121,6 @@ cost_t sum_of_absolute_differences(
     assert(valid_pixels > 0);
     // std::cerr << "sum: " << sum << ", valid_pixels: " << valid_pixels << ", result: " << sum / valid_pixels << "\n";
     return static_cast<cost_t>(sum / valid_pixels);
-}
-
-cost_t sum_of_absolute_differences_3(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::ImageGray<std::uint8_t>& right,
-        const std::size_t row,
-        const std::size_t col,
-        const std::size_t disparity) {
-    return sum_of_absolute_differences(left, right, row, col, disparity, 3);
 }
 
 acc_cost_arr_t
@@ -212,7 +204,7 @@ ImageGray<std::uint8_t>
 semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::uint8_t>& right) {
 
     // const auto costs = calculate_costs(left, right, pixelwise_absolute_difference);
-    const auto costs = calculate_costs(left, right, sum_of_absolute_differences_3);
+    const auto costs = calculate_costs(left, right, sum_of_absolute_differences<3>);
 
     const auto accumulated_costs_x1_y0 = accumulate_costs_direction_x1_y0(left, costs);
 
