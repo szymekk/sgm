@@ -8,26 +8,22 @@
 namespace {
 const std::size_t MAX_DISPARITY = 64;
 
-using cost_value_t = std::uint8_t;
-using costs_vector_t = std::array<cost_value_t, MAX_DISPARITY>;
-const cost_value_t INVALID_COST = std::numeric_limits<cost_value_t>::max();
+using cost_t = std::uint8_t;
+using cost_arr_t = std::array<cost_t, MAX_DISPARITY>;
+const cost_t INVALID_COST = std::numeric_limits<cost_t>::max();
 
-using accumulated_cost_value_t = std::uint16_t;
-using accumulated_costs_vector_t = std::array<accumulated_cost_value_t, MAX_DISPARITY>;
+using acc_cost_t = std::uint16_t;
+using acc_cost_arr_t = std::array<acc_cost_t, MAX_DISPARITY>;
 
-const accumulated_cost_value_t PENALTY_1 = 15;
-const accumulated_cost_value_t PENALTY_2 = 100;
-
-// std::uint8_t abs_diff(const std::uint8_t a, const std::uint8_t b) {
-//     return static_cast<std::uint8_t>(a < b ? b - a : a - b);
-// }
+const acc_cost_t PENALTY_1 = 15;
+const acc_cost_t PENALTY_2 = 100;
 
 template<typename T>
 T abs_diff(const T a, const T b) {
     return static_cast<T>(a < b ? b - a : a - b);
 }
 
-using cost_function_t = cost_value_t (*)(
+using cost_function_t = cost_t (*)(
         const img::ImageGray<std::uint8_t>& left,
         const img::ImageGray<std::uint8_t>& right,
         const std::size_t row,
@@ -35,11 +31,11 @@ using cost_function_t = cost_value_t (*)(
         const std::size_t disparity);
 
 // todo: add different cost functions
-img::Grid<costs_vector_t>
+img::Grid<cost_arr_t>
 calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
                 cost_function_t cost_function) {
 
-    img::Grid<costs_vector_t> costs(left.width, left.height);
+    img::Grid<cost_arr_t> costs(left.width, left.height);
     for(std::size_t row = 0; row < left.height; ++row) {
         std::cerr << "processing row: " << row << "\n";
         for(std::size_t col = 0; col < left.width; ++col) {
@@ -50,7 +46,7 @@ calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<s
                     costs.get(col, row)[d] = INVALID_COST;
                 } else {
                     // std::cerr << "c: " << col << ", r: " << row << ", d: " << d << "...";
-                    const cost_value_t calculated = cost_function(left, right, row, col, d);
+                    const cost_t calculated = cost_function(left, right, row, col, d);
                     // std::cerr << " calculated: " << +calculated << "...";
                     costs.get(col, row)[d] = calculated;
                     // std::cerr << "assigned!\n";
@@ -61,7 +57,7 @@ calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<s
     return costs;
 }
 [[maybe_unused]]
-cost_value_t pixelwise_absolute_difference(
+cost_t pixelwise_absolute_difference(
         const img::ImageGray<std::uint8_t>& left,
         const img::ImageGray<std::uint8_t>& right,
         const std::size_t row,
@@ -74,7 +70,7 @@ cost_value_t pixelwise_absolute_difference(
     }
 }
 
-cost_value_t sum_of_absolute_differences(
+cost_t sum_of_absolute_differences(
         const img::ImageGray<std::uint8_t>& left,
         const img::ImageGray<std::uint8_t>& right,
         const std::size_t row,
@@ -89,7 +85,7 @@ cost_value_t sum_of_absolute_differences(
 
     assert(
             std::numeric_limits<decltype(sum)>::max() >=
-            window_size * window_size * std::numeric_limits<cost_value_t>::max());
+            window_size * window_size * std::numeric_limits<cost_t>::max());
 
 
     const std::size_t r_min = (row >= n) ? row - n : 0;
@@ -123,10 +119,10 @@ cost_value_t sum_of_absolute_differences(
     }
     assert(valid_pixels > 0);
     // std::cerr << "sum: " << sum << ", valid_pixels: " << valid_pixels << ", result: " << sum / valid_pixels << "\n";
-    return static_cast<cost_value_t>(sum / valid_pixels);
+    return static_cast<cost_t>(sum / valid_pixels);
 }
 
-cost_value_t sum_of_absolute_differences_3(
+cost_t sum_of_absolute_differences_3(
         const img::ImageGray<std::uint8_t>& left,
         const img::ImageGray<std::uint8_t>& right,
         const std::size_t row,
@@ -135,27 +131,26 @@ cost_value_t sum_of_absolute_differences_3(
     return sum_of_absolute_differences(left, right, row, col, disparity, 3);
 }
 
-accumulated_costs_vector_t
+acc_cost_arr_t
 compute_additional_cost(
-        const accumulated_costs_vector_t& previous,
+        const acc_cost_arr_t& previous,
         const std::uint8_t intensity_change) {
 
-    using penalty_t = accumulated_cost_value_t;
-    const penalty_t penalty_2_tentative =
-        static_cast<penalty_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
-    const penalty_t penalty_2 = std::max(PENALTY_1, penalty_2_tentative);
+    const auto penalty_2_tentative =
+            static_cast<acc_cost_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
+    const auto penalty_2 = std::max(PENALTY_1, penalty_2_tentative);
 
-    accumulated_costs_vector_t additional_costs;
+    acc_cost_arr_t additional_costs;
     for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
-        auto additional_cost = std::numeric_limits<accumulated_cost_value_t>::max();
+        auto additional_cost = std::numeric_limits<acc_cost_t>::max();
         for (std::size_t d_p = 0; d_p < MAX_DISPARITY; ++d_p) {
             const auto diff = abs_diff(d_p, d);
             if (0 == diff) {
                 additional_cost = std::min(additional_cost, previous[d_p]);
             } else if (1 == diff) {
-                additional_cost = std::min(additional_cost, static_cast<penalty_t>(previous[d_p]+PENALTY_1));
+                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p]+PENALTY_1));
             } else {
-                additional_cost = std::min(additional_cost, static_cast<penalty_t>(previous[d_p]+penalty_2));
+                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p]+penalty_2));
             }
         }
         additional_costs[d] = additional_cost;
@@ -169,16 +164,16 @@ compute_additional_cost(
 //    a) accumulated cost at previous location (c - 1, r),
 //    b) the absolute difference of intensity values at the current and previous locations
 // 3) negated value of the minimal element of term 2a
-img::Grid<accumulated_costs_vector_t>
+img::Grid<acc_cost_arr_t>
 accumulate_costs_direction_x1_y0(
         const img::ImageGray<std::uint8_t>& left,
-        const img::Grid<costs_vector_t>& costs) {
+        const img::Grid<cost_arr_t>& costs) {
 
-    img::Grid<accumulated_costs_vector_t> accumulated_costs(costs.width, costs.height);
+    img::Grid<acc_cost_arr_t> accumulated_costs(costs.width, costs.height);
     // (1) initialize accumulated costs with values from costs
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(accumulated_costs.data),
-            [](const costs_vector_t& cv){
-                accumulated_costs_vector_t acc_cv;
+            [](const cost_arr_t& cv){
+                acc_cost_arr_t acc_cv;
                 std::copy(cv.begin(), cv.end(), std::begin(acc_cv));
                 return acc_cv;
             });
@@ -193,13 +188,13 @@ accumulate_costs_direction_x1_y0(
             // accumulated_costs.get(c, r) += additional_costs;
             auto& local = accumulated_costs.get(c, r);
             std::transform(local.begin(), local.end(), additional_costs.begin(),
-                    local.begin(), std::plus<accumulated_cost_value_t>());
+                    local.begin(), std::plus<>());
 
             // (3) substract min_element of previous from each element of local
             const auto min = *std::min_element(previous.begin(), previous.end());
             for (auto& cost : local) {
                 // cost -= min;
-                cost = static_cast<accumulated_cost_value_t>(cost - min);
+                cost = static_cast<acc_cost_t>(cost - min);
             }
         }
     }
@@ -223,15 +218,15 @@ semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::u
 
     // ImageGray<std::uint8_t> min_cost_view(left.width, left.height);
     // std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
-    //                [](const costs_vector_t& cv){
+    //                [](const cost_arr_t& cv){
     //                    return PixelGray<std::uint8_t>{ *std::min_element(std::begin(cv), std::end(cv)) };
     //                });
 
     static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY, "disparity values might fit into the image");
     ImageGray<std::uint8_t> naive_disparity(left.width, left.height);
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
-                [](const costs_vector_t& cv){
-                    const costs_vector_t::const_iterator result = std::min_element(std::begin(cv), std::end(cv));
+                [](const cost_arr_t& cv){
+                    const auto result = std::min_element(std::begin(cv), std::end(cv));
                     return PixelGray<std::uint8_t>{ static_cast<std::uint8_t>(std::distance(std::begin(cv), result)) };
                 });
     static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits"); for (auto& pixel : naive_disparity.data) {pixel.value = static_cast<std::uint8_t>(pixel.value * 4);};
