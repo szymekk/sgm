@@ -36,11 +36,11 @@ calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<s
                 cost_function_t cost_function) {
 
     img::Grid<cost_arr_t> costs(left.width, left.height);
-    for(std::size_t row = 0; row < left.height; ++row) {
+    for (std::size_t row = 0; row < left.height; ++row) {
         std::cerr << "processing row: " << row << "\n";
-        for(std::size_t col = 0; col < left.width; ++col) {
+        for (std::size_t col = 0; col < left.width; ++col) {
             // std::cerr << "processing column: " << col << "\n";
-            for(std::size_t d = 0; d < MAX_DISPARITY; ++d) {
+            for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
                 // std::cerr << "processing disparity: " << d << "\n";
                 if (col < d) {
                     costs.get(col, row)[d] = INVALID_COST;
@@ -56,6 +56,7 @@ calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<s
     }
     return costs;
 }
+
 [[maybe_unused]]
 cost_t pixelwise_absolute_difference(
         const img::ImageGray<std::uint8_t>& left,
@@ -66,7 +67,7 @@ cost_t pixelwise_absolute_difference(
     if (col < disparity) {
         return INVALID_COST;
     } else {
-        return abs_diff(left.get(col, row).value, right.get(col-disparity, row).value);
+        return abs_diff(left.get(col, row).value, right.get(col - disparity, row).value);
     }
 }
 
@@ -113,10 +114,10 @@ cost_t sum_of_absolute_differences(
     }
     if (0 == valid_pixels) {
         std::cerr
-            << "row: " << row
-            << ", col: " << col
-            << ", disparity: " << disparity
-            << "\n";
+                << "row: " << row
+                << ", col: " << col
+                << ", disparity: " << disparity
+                << "\n";
     }
     assert(valid_pixels > 0);
     // std::cerr << "sum: " << sum << ", valid_pixels: " << valid_pixels << ", result: " << sum / valid_pixels << "\n";
@@ -140,9 +141,9 @@ compute_additional_cost(
             if (0 == diff) {
                 additional_cost = std::min(additional_cost, previous[d_p]);
             } else if (1 == diff) {
-                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p]+PENALTY_1));
+                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p] + PENALTY_1));
             } else {
-                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p]+penalty_2));
+                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p] + penalty_2));
             }
         }
         additional_costs[d] = additional_cost;
@@ -164,23 +165,23 @@ accumulate_costs_direction_x1_y0(
     img::Grid<acc_cost_arr_t> accumulated_costs(costs.width, costs.height);
     // (1) initialize accumulated costs with values from costs
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(accumulated_costs.data),
-            [](const cost_arr_t& cv){
-                acc_cost_arr_t acc_cv;
-                std::copy(cv.begin(), cv.end(), std::begin(acc_cv));
-                return acc_cv;
-            });
+                   [](const cost_arr_t& cv) {
+                       acc_cost_arr_t acc_cv;
+                       std::copy(cv.begin(), cv.end(), std::begin(acc_cv));
+                       return acc_cv;
+                   });
 
     for (std::size_t r = 0; r < accumulated_costs.height; ++r) {
         for (std::size_t c = 1; c < accumulated_costs.width; ++c) {
             // (2)
             const auto intensity_change = abs_diff(left.get(c, r).value, left.get(c - 1, r).value);
-            const auto& previous = accumulated_costs.get(c - 1,r);
+            const auto& previous = accumulated_costs.get(c - 1, r);
             const auto additional_costs =
                     compute_additional_cost(previous, intensity_change);
             // accumulated_costs.get(c, r) += additional_costs;
             auto& local = accumulated_costs.get(c, r);
             std::transform(local.begin(), local.end(), additional_costs.begin(),
-                    local.begin(), std::plus<>());
+                           local.begin(), std::plus<>());
 
             // (3) substract min_element of previous from each element of local
             const auto min = *std::min_element(previous.begin(), previous.end());
@@ -214,22 +215,26 @@ semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::u
     //                    return PixelGray<std::uint8_t>{ *std::min_element(std::begin(cv), std::end(cv)) };
     //                });
 
-    static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY, "disparity values might fit into the image");
+    static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY,
+                  "disparity values might fit into the image");
     ImageGray<std::uint8_t> naive_disparity(left.width, left.height);
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
-                [](const cost_arr_t& cv){
-                    const auto result = std::min_element(std::begin(cv), std::end(cv));
-                    return PixelGray<std::uint8_t>{ static_cast<std::uint8_t>(std::distance(std::begin(cv), result)) };
-                });
-    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits"); for (auto& pixel : naive_disparity.data) {pixel.value = static_cast<std::uint8_t>(pixel.value * 4);};
+                   [](const cost_arr_t& cv) {
+                       const auto result = std::min_element(std::begin(cv), std::end(cv));
+                       return PixelGray<std::uint8_t>{static_cast<std::uint8_t>(std::distance(std::begin(cv), result))};
+                   });
+    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits");
+    for (auto& pixel : naive_disparity.data) { pixel.value = static_cast<std::uint8_t>(pixel.value * 4); };
 
     ImageGray<std::uint8_t> acc_disparity(left.width, left.height);
-    std::transform(std::cbegin(accumulated_costs_x1_y0.data), std::cend(accumulated_costs_x1_y0.data), std::begin(acc_disparity.data),
-                [](const auto& cv){
-                    const auto result = std::min_element(std::begin(cv), std::end(cv));
-                    return PixelGray<std::uint8_t>{ static_cast<std::uint8_t>(std::distance(std::begin(cv), result)) };
-                });
-    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits"); for (auto& pixel : acc_disparity.data) {pixel.value = static_cast<std::uint8_t>(pixel.value * 4);};
+    std::transform(std::cbegin(accumulated_costs_x1_y0.data), std::cend(accumulated_costs_x1_y0.data),
+                   std::begin(acc_disparity.data),
+                   [](const auto& cv) {
+                       const auto result = std::min_element(std::begin(cv), std::end(cv));
+                       return PixelGray<std::uint8_t>{static_cast<std::uint8_t>(std::distance(std::begin(cv), result))};
+                   });
+    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits");
+    for (auto& pixel : acc_disparity.data) { pixel.value = static_cast<std::uint8_t>(pixel.value * 4); };
 
     return acc_disparity;
 }

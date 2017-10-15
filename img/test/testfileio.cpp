@@ -52,7 +52,7 @@ int main(int argc, const char* argv[]) {
             std::cerr << "cannot read PGM image properly \n";
         }
 
-        if(argc == 3) {
+        if (argc == 3) {
             const std::string out_basename = argv[2];
 
             const std::string out_file_ppm = out_basename + ".ppm";

@@ -6,7 +6,8 @@
 
 namespace img {
 
-ImageGray<std::uint8_t> semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::uint8_t>& right);
+ImageGray <std::uint8_t>
+semi_global_matching(const ImageGray <std::uint8_t>& left, const ImageGray <std::uint8_t>& right);
 
 } // namespace img
 

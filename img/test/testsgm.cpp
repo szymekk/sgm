@@ -20,7 +20,7 @@ int main(int argc, const char* argv[]) {
 
             const auto& disparity_img = img::semi_global_matching(left_gray, right_gray);
             const auto& max = std::max_element(std::begin(disparity_img.data), std::end(disparity_img.data),
-                [](const auto& px1, const auto& px2){return px1.value < px2.value;});
+                                               [](const auto& px1, const auto& px2){return px1.value < px2.value;});
             std::cout << "max pixel: " << +max->value << "\n";
 
             if(argc == 4) {

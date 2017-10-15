@@ -5,27 +5,27 @@
 
 namespace {
 
-void write_rgb_image_to_ppm_fstream(const img::ImageRGB<std::uint8_t> &image, std::ofstream &output_file) {
+void write_rgb_image_to_ppm_fstream(const img::ImageRGB<std::uint8_t>& image, std::ofstream& output_file) {
     output_file << "P6\n";
     output_file << image.width << " " << image.height << "\n";
     output_file << "255\n"; // max value
-    for (const auto &pixel : image.data) {
+    for (const auto& pixel : image.data) {
         output_file << static_cast<char>(pixel.red)
                     << static_cast<char>(pixel.green)
                     << static_cast<char>(pixel.blue);
     }
 }
 
-void write_gray_image_to_pgm_fstream(const img::ImageGray<std::uint8_t> &image, std::ofstream &output_file) {
+void write_gray_image_to_pgm_fstream(const img::ImageGray<std::uint8_t>& image, std::ofstream& output_file) {
     output_file << "P5\n";
     output_file << image.width << " " << image.height << "\n";
     output_file << "255\n"; // max value
-    for (const auto &pixel : image.data) {
+    for (const auto& pixel : image.data) {
         output_file << static_cast<char>(pixel.value);
     }
 }
 
-std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(std::istream &input_file) {
+std::optional<img::ImageRGB<std::uint8_t> > make_rgb_image_from_ppm_fstream(std::istream& input_file) {
     //check file type
     if ('P' != input_file.get()) {
         std::cerr << "invalid header";
@@ -83,7 +83,7 @@ std::optional< img::ImageRGB< std::uint8_t > > make_rgb_image_from_ppm_fstream(s
     return image_rgb;
 }
 
-std::optional< img::ImageGray< std::uint8_t > > make_gray_image_from_pgm_fstream(std::istream &input_file) {
+std::optional<img::ImageGray<std::uint8_t> > make_gray_image_from_pgm_fstream(std::istream& input_file) {
     //check file type
     if ('P' != input_file.get()) {
         std::cerr << "invalid header";
@@ -130,7 +130,7 @@ std::optional< img::ImageGray< std::uint8_t > > make_gray_image_from_pgm_fstream
 
 namespace img {
 
-std::optional< ImageRGB< std::uint8_t > > make_rgb_image_from_ppm(const std::string& filename) {
+std::optional<ImageRGB<std::uint8_t> > make_rgb_image_from_ppm(const std::string& filename) {
     if (auto input_file_stream = std::ifstream(filename, std::ios::in | std::ios::binary)) {
         return make_rgb_image_from_ppm_fstream(input_file_stream);
     } else {
@@ -140,7 +140,7 @@ std::optional< ImageRGB< std::uint8_t > > make_rgb_image_from_ppm(const std::str
     }
 }
 
-std::optional< ImageGray< std::uint8_t > > make_gray_image_from_pgm(const std::string &filename) {
+std::optional<ImageGray<std::uint8_t> > make_gray_image_from_pgm(const std::string& filename) {
     if (auto input_file_stream = std::ifstream(filename, std::ios::in | std::ios::binary)) {
         return make_gray_image_from_pgm_fstream(input_file_stream);
     } else {
@@ -150,7 +150,7 @@ std::optional< ImageGray< std::uint8_t > > make_gray_image_from_pgm(const std::s
     }
 }
 
-void write_rgb_image_to_ppm(const ImageRGB<std::uint8_t> &image, const std::string &filename) {
+void write_rgb_image_to_ppm(const ImageRGB<std::uint8_t>& image, const std::string& filename) {
     if (auto output_file = std::ofstream(filename, std::ios::out | std::ios::binary)) {
         write_rgb_image_to_ppm_fstream(image, output_file);
         output_file.close();
@@ -159,7 +159,7 @@ void write_rgb_image_to_ppm(const ImageRGB<std::uint8_t> &image, const std::stri
     }
 }
 
-void write_gray_image_to_pgm(const ImageGray<std::uint8_t> &image, const std::string &filename) {
+void write_gray_image_to_pgm(const ImageGray<std::uint8_t>& image, const std::string& filename) {
     if (auto output_file = std::ofstream(filename, std::ios::out | std::ios::binary)) {
         write_gray_image_to_pgm_fstream(image, output_file);
         output_file.close();
