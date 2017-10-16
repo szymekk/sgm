@@ -195,7 +195,7 @@ semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::u
     //                });
 
     static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY,
-                  "disparity values might fit into the image");
+                  "disparity values might not fit into the image");
     ImageGray<std::uint8_t> naive_disparity(left.width, left.height);
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
                    [](const cost_arr_t& cv) {
