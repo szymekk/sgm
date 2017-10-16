@@ -7,6 +7,15 @@
 
 namespace img {
 
+namespace detail {
+template<typename ContainerT>
+std::size_t index_of_min_element(const ContainerT& c) {
+    const auto min_element = std::min_element(std::begin(c), std::end(c));
+    return static_cast<std::size_t>(std::distance(std::begin(c), min_element));
+}
+
+} // namespace detail
+
 inline const std::size_t MAX_DISPARITY = 64;
 
 using cost_t = std::uint8_t;
@@ -36,6 +45,22 @@ img::Grid<acc_cost_arr_t>
 accumulate_costs_direction_x1_y0(
         const img::ImageGray<std::uint8_t>& left,
         const img::Grid<cost_arr_t>& costs);
+
+template<typename CostArrayT>
+ImageGray<std::uint8_t> create_disparity_view(const img::Grid<CostArrayT>& costs) {
+    static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY,
+                  "disparity values might not fit into the image");
+
+    ImageGray<std::uint8_t> disparity_view(costs.width, costs.height);
+    std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(disparity_view.data),
+                   [](const auto& cv) {
+                       const auto disparity = detail::index_of_min_element(cv);
+                       static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits");
+                       const auto scaled_disparity = static_cast<std::uint8_t>(4 * disparity);
+                       return PixelGray<std::uint8_t>{scaled_disparity};
+                   });
+    return disparity_view;
+}
 
 ImageGray <std::uint8_t>
 semi_global_matching(const ImageGray <std::uint8_t>& left, const ImageGray <std::uint8_t>& right);

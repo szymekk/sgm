@@ -185,36 +185,11 @@ semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::u
 
     // const auto costs = calculate_costs(left, right, pixelwise_absolute_difference);
     const auto costs = calculate_costs(left, right, sum_of_absolute_differences<3>);
-
     const auto accumulated_costs_x1_y0 = accumulate_costs_direction_x1_y0(left, costs);
 
-    // ImageGray<std::uint8_t> min_cost_view(left.width, left.height);
-    // std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
-    //                [](const cost_arr_t& cv){
-    //                    return PixelGray<std::uint8_t>{ *std::min_element(std::begin(cv), std::end(cv)) };
-    //                });
+    //todo: accumulate costs along other directions and sum all costs
 
-    static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY,
-                  "disparity values might not fit into the image");
-    ImageGray<std::uint8_t> naive_disparity(left.width, left.height);
-    std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(naive_disparity.data),
-                   [](const cost_arr_t& cv) {
-                       const auto result = std::min_element(std::begin(cv), std::end(cv));
-                       return PixelGray<std::uint8_t>{static_cast<std::uint8_t>(std::distance(std::begin(cv), result))};
-                   });
-    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits");
-    for (auto& pixel : naive_disparity.data) { pixel.value = static_cast<std::uint8_t>(pixel.value * 4); };
-
-    ImageGray<std::uint8_t> acc_disparity(left.width, left.height);
-    std::transform(std::cbegin(accumulated_costs_x1_y0.data), std::cend(accumulated_costs_x1_y0.data),
-                   std::begin(acc_disparity.data),
-                   [](const auto& cv) {
-                       const auto result = std::min_element(std::begin(cv), std::end(cv));
-                       return PixelGray<std::uint8_t>{static_cast<std::uint8_t>(std::distance(std::begin(cv), result))};
-                   });
-    static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits");
-    for (auto& pixel : acc_disparity.data) { pixel.value = static_cast<std::uint8_t>(pixel.value * 4); };
-
-    return acc_disparity;
+    return create_disparity_view(accumulated_costs_x1_y0);
 }
+
 } // namespace img
