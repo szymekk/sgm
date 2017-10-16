@@ -1,4 +1,3 @@
-#include <array>
 #include <algorithm>
 #include <iostream>
 
@@ -6,64 +5,54 @@
 #include "img/sgm.h"
 
 namespace {
-const std::size_t MAX_DISPARITY = 64;
 
-using cost_t = std::uint8_t;
-using cost_arr_t = std::array<cost_t, MAX_DISPARITY>;
-const cost_t INVALID_COST = std::numeric_limits<cost_t>::max();
-
-using acc_cost_t = std::uint16_t;
-using acc_cost_arr_t = std::array<acc_cost_t, MAX_DISPARITY>;
-
-const acc_cost_t PENALTY_1 = 15;
-const acc_cost_t PENALTY_2 = 100;
+const img::acc_cost_t PENALTY_1 = 15;
+const img::acc_cost_t PENALTY_2 = 100;
 
 template<typename T>
 T abs_diff(const T a, const T b) {
     return static_cast<T>(a < b ? b - a : a - b);
 }
 
-using cost_function_t = cost_t (*)(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::ImageGray<std::uint8_t>& right,
-        const std::size_t row,
-        const std::size_t col,
-        const std::size_t disparity);
+using img::acc_cost_t;
+using img::acc_cost_arr_t;
+using img::MAX_DISPARITY;
 
-// todo: add different cost functions
-img::Grid<cost_arr_t>
-calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
-                cost_function_t cost_function) {
+acc_cost_arr_t
+compute_additional_cost(
+        const acc_cost_arr_t& previous,
+        const std::uint8_t intensity_change) {
 
-    img::Grid<cost_arr_t> costs(left.width, left.height);
-    for (std::size_t row = 0; row < left.height; ++row) {
-        std::cerr << "processing row: " << row << "\n";
-        for (std::size_t col = 0; col < left.width; ++col) {
-            // std::cerr << "processing column: " << col << "\n";
-            for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
-                // std::cerr << "processing disparity: " << d << "\n";
-                if (col < d) {
-                    costs.get(col, row)[d] = INVALID_COST;
-                } else {
-                    // std::cerr << "c: " << col << ", r: " << row << ", d: " << d << "...";
-                    const cost_t calculated = cost_function(left, right, row, col, d);
-                    // std::cerr << " calculated: " << +calculated << "...";
-                    costs.get(col, row)[d] = calculated;
-                    // std::cerr << "assigned!\n";
-                }
+    const auto penalty_2_tentative =
+            static_cast<acc_cost_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
+    const auto penalty_2 = std::max(PENALTY_1, penalty_2_tentative);
+
+    acc_cost_arr_t additional_costs;
+    for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
+        auto additional_cost = std::numeric_limits<acc_cost_t>::max();
+        for (std::size_t d_p = 0; d_p < MAX_DISPARITY; ++d_p) {
+            const auto diff = abs_diff(d_p, d);
+            if (0 == diff) {
+                additional_cost = std::min(additional_cost, previous[d_p]);
+            } else if (1 == diff) {
+                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p] + PENALTY_1));
+            } else {
+                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p] + penalty_2));
             }
         }
+        additional_costs[d] = additional_cost;
     }
-    return costs;
+    return additional_costs;
 }
 
+} // namespace
+
+namespace img {
+
 [[maybe_unused]]
-cost_t pixelwise_absolute_difference(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::ImageGray<std::uint8_t>& right,
-        const std::size_t row,
-        const std::size_t col,
-        const std::size_t disparity) {
+cost_t
+pixelwise_absolute_difference(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
+                              const std::size_t row, const std::size_t col, const std::size_t disparity) {
     if (col < disparity) {
         return INVALID_COST;
     } else {
@@ -72,12 +61,8 @@ cost_t pixelwise_absolute_difference(
 }
 
 template<std::size_t WINDOW_SIZE>
-cost_t sum_of_absolute_differences(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::ImageGray<std::uint8_t>& right,
-        const std::size_t row,
-        const std::size_t col,
-        const std::size_t disparity) {
+cost_t sum_of_absolute_differences(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
+                                   const std::size_t row, const std::size_t col, const std::size_t disparity) {
     static_assert(WINDOW_SIZE > 0, "window size should be positive");
     static_assert(WINDOW_SIZE % 2 == 1, "window should be symmetrical");
 
@@ -124,31 +109,31 @@ cost_t sum_of_absolute_differences(
     return static_cast<cost_t>(sum / valid_pixels);
 }
 
-acc_cost_arr_t
-compute_additional_cost(
-        const acc_cost_arr_t& previous,
-        const std::uint8_t intensity_change) {
+// todo: add different cost functions
+img::Grid<cost_arr_t>
+calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
+                cost_function_t cost_function) {
 
-    const auto penalty_2_tentative =
-            static_cast<acc_cost_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
-    const auto penalty_2 = std::max(PENALTY_1, penalty_2_tentative);
-
-    acc_cost_arr_t additional_costs;
-    for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
-        auto additional_cost = std::numeric_limits<acc_cost_t>::max();
-        for (std::size_t d_p = 0; d_p < MAX_DISPARITY; ++d_p) {
-            const auto diff = abs_diff(d_p, d);
-            if (0 == diff) {
-                additional_cost = std::min(additional_cost, previous[d_p]);
-            } else if (1 == diff) {
-                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p] + PENALTY_1));
-            } else {
-                additional_cost = std::min(additional_cost, static_cast<acc_cost_t>(previous[d_p] + penalty_2));
+    img::Grid<cost_arr_t> costs(left.width, left.height);
+    for (std::size_t row = 0; row < left.height; ++row) {
+        std::cerr << "processing row: " << row << "\n";
+        for (std::size_t col = 0; col < left.width; ++col) {
+            // std::cerr << "processing column: " << col << "\n";
+            for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
+                // std::cerr << "processing disparity: " << d << "\n";
+                if (col < d) {
+                    costs.get(col, row)[d] = INVALID_COST;
+                } else {
+                    // std::cerr << "c: " << col << ", r: " << row << ", d: " << d << "...";
+                    const cost_t calculated = cost_function(left, right, row, col, d);
+                    // std::cerr << " calculated: " << +calculated << "...";
+                    costs.get(col, row)[d] = calculated;
+                    // std::cerr << "assigned!\n";
+                }
             }
         }
-        additional_costs[d] = additional_cost;
     }
-    return additional_costs;
+    return costs;
 }
 
 // accumulated cost at location (c, r) is equal to the sum of three terms:
@@ -158,9 +143,7 @@ compute_additional_cost(
 //    b) the absolute difference of intensity values at the current and previous locations
 // 3) negated value of the minimal element of term 2a
 img::Grid<acc_cost_arr_t>
-accumulate_costs_direction_x1_y0(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::Grid<cost_arr_t>& costs) {
+accumulate_costs_direction_x1_y0(const img::ImageGray<std::uint8_t>& left, const img::Grid<cost_arr_t>& costs) {
 
     img::Grid<acc_cost_arr_t> accumulated_costs(costs.width, costs.height);
     // (1) initialize accumulated costs with values from costs
@@ -194,10 +177,6 @@ accumulate_costs_direction_x1_y0(
 
     return accumulated_costs;
 }
-
-} // namespace
-
-namespace img {
 
 // returns a disparity image from two rectified grayscale images
 // left image is the base image
