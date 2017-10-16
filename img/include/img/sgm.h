@@ -23,20 +23,10 @@ using cost_function_t = cost_t(
         const std::size_t col,
         const std::size_t disparity);
 
-cost_t pixelwise_absolute_difference(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::ImageGray<std::uint8_t>& right,
-        const std::size_t row,
-        const std::size_t col,
-        const std::size_t disparity);
+cost_function_t pixelwise_absolute_difference;
 
 template<std::size_t WINDOW_SIZE>
-cost_t sum_of_absolute_differences(
-        const img::ImageGray<std::uint8_t>& left,
-        const img::ImageGray<std::uint8_t>& right,
-        const std::size_t row,
-        const std::size_t col,
-        const std::size_t disparity);
+cost_function_t sum_of_absolute_differences;
 
 img::Grid<cost_arr_t>
 calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
