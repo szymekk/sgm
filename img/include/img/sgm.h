@@ -46,6 +46,10 @@ accumulate_costs_direction_x1_y0(
         const img::ImageGray<std::uint8_t>& left,
         const img::Grid<cost_arr_t>& costs);
 
+template<int dir_x, int dir_y>
+img::Grid<acc_cost_arr_t>
+accumulate_costs_direction(const img::ImageGray<std::uint8_t>& left, const img::Grid<cost_arr_t>& costs);
+
 template<typename CostArrayT>
 ImageGray<std::uint8_t> create_disparity_view(const img::Grid<CostArrayT>& costs) {
     static_assert(std::numeric_limits<std::uint8_t>::max() >= MAX_DISPARITY,

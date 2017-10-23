@@ -27,3 +27,9 @@ add_executable(testsgm
 
 target_link_libraries(testsgm
         img)
+
+add_executable(testdirections
+        test/testdirections.cpp)
+
+target_link_libraries(testdirections
+        img)
