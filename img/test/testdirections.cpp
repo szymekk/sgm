@@ -14,35 +14,28 @@ img::ImageGray<std::uint8_t>(
     const img::ImageGray<std::uint8_t>& left,
     const img::Grid<img::cost_arr_t>& costs);
 
-std::map<std::pair<int, int>, fun_t*> ind_to_fun;
+using acc_fun_t =
+img::Grid<img::acc_cost_arr_t>(
+        const img::ImageGray<std::uint8_t>& left,
+        const img::Grid<img::cost_arr_t>& costs);
 
-template<int x, int y>
-fun_t sgm_direction;
+using direction_t = std::pair<int, int>;
 
-// returns a disparity image from two rectified grayscale images
-// left image is the base image
-template<int x, int y>
-img::ImageGray<std::uint8_t>
-sgm_direction(const img::ImageGray<std::uint8_t>& left,
-              const img::Grid<img::cost_arr_t>& costs) {
-    const auto accumulated_costs = img::accumulate_costs_direction<x, y>(left, costs);
-    return img::create_disparity_view(accumulated_costs);
-}
+constexpr std::array<std::pair<direction_t, acc_fun_t*>, 8> path_functions = { {
+        {{+1,  0}, &img::accumulate_costs_direction<+1,  0>},
+        {{+1, +1}, &img::accumulate_costs_direction<+1, +1>},
+        {{ 0, +1}, &img::accumulate_costs_direction< 0, +1>},
+        {{-1, +1}, &img::accumulate_costs_direction<-1, +1>},
+
+        {{-1,  0}, &img::accumulate_costs_direction<-1,  0>},
+
+        {{-1, -1}, &img::accumulate_costs_direction<-1, -1>},
+        {{ 0, -1}, &img::accumulate_costs_direction< 0, -1>},
+        {{+1, -1}, &img::accumulate_costs_direction<+1, -1>},
+} };
 } // namespace
 
 int main(int argc, const char* argv[]) {
-
-    // ind_to_fun[{1, 0}] = &old_direction;
-
-    ind_to_fun[{+1,  0}] = &sgm_direction<+1,  0>;
-    ind_to_fun[{+1, +1}] = &sgm_direction<+1, +1>;
-    ind_to_fun[{ 0, +1}] = &sgm_direction< 0, +1>;
-    ind_to_fun[{-1, +1}] = &sgm_direction<-1, +1>;
-
-    ind_to_fun[{-1,  0}] = &sgm_direction<-1,  0>;
-    ind_to_fun[{-1, -1}] = &sgm_direction<-1, -1>;
-    ind_to_fun[{ 0, -1}] = &sgm_direction< 0, -1>;
-    ind_to_fun[{+1, -1}] = &sgm_direction<+1, -1>;
 
     if (argc >= 4) {
         const std::string left_filename  = argv[1];
@@ -56,17 +49,36 @@ int main(int argc, const char* argv[]) {
             const auto& left_gray  = rgb_to_gray_image(maybe_left_rgb.value());
             const auto& right_gray = rgb_to_gray_image(maybe_right_rgb.value());
 
-            const auto costs = img::calculate_costs(left_gray, right_gray, img::sum_of_absolute_differences<3>);
+//            const auto costs = img::calculate_costs(left_gray, right_gray, img::sum_of_absolute_differences<3>);
+            const auto costs = img::calculate_costs(left_gray, right_gray, img::pixelwise_absolute_difference);
 
-            for (const auto [index, fun] : ind_to_fun) {
-                const auto [x, y] = index;
-                const auto& disparity_img = fun(left_gray, costs);
-                const auto& max = std::max_element(std::begin(disparity_img.data), std::end(disparity_img.data),
+            img::Grid<img::acc_cost_arr_t> total_costs(left_gray.width, left_gray.height);
+            for (const auto [direction, path_function] : path_functions) {
+                const auto [x, y] = direction;
+                const auto& path_costs = path_function(left_gray, costs);
+                const auto& path_disparity = img::create_disparity_view(path_costs);
+                const auto& max = std::max_element(std::begin(path_disparity.data), std::end(path_disparity.data),
                                                    [](const auto& px1, const auto& px2){return px1.value < px2.value;});
                 std::cout << "max pixel for direction {x: " << x << ", y: " << y << "}: " << +max->value << "\n";
-                std::string out_filename = out_basename + "_dir_" + std::to_string(x) + "_" + std::to_string(y) + ".pgm";
+
+                const std::string out_filename = out_basename + "_dir_" + std::to_string(x) + "_" + std::to_string(y) + ".pgm";
                 std::cout << "saving disparity image to: " << out_filename << "\n";
-                img::write_gray_image_to_pgm(disparity_img, out_filename);
+                img::write_gray_image_to_pgm(path_disparity, out_filename);
+
+                //total_costs += path_costs;
+                auto& total_vector = total_costs.data;
+                const auto& path_vector = path_costs.data;
+                for (std::size_t px = 0; px < total_vector.size(); ++px) {
+                    auto& total_px = total_vector[px];
+                    const auto& path_px = path_vector[px];
+                    std::transform(total_px.begin(), total_px.end(), path_px.begin(),
+                                   total_px.begin(), std::plus<>());
+                }
+
+                const auto& total_disparity = img::create_disparity_view(total_costs);
+                const std::string sum_out_filename = out_basename + "_sum_after_" + std::to_string(x) + "_" + std::to_string(y) + ".pgm";
+                std::cout << "saving sum disparity image to: " << sum_out_filename << "\n";
+                img::write_gray_image_to_pgm(total_disparity, sum_out_filename);
             }
         } else {
             std::cerr << "cannot read PPM images properly \n";
