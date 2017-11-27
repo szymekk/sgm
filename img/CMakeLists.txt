@@ -5,6 +5,7 @@ file(GLOB IMG_HEADERS
         include/img/*.h)
 
 add_library(img
+        src/eval.cpp
         src/fileio.cpp
         ${IMG_HEADERS} src/sgm.cpp)
 
@@ -32,4 +33,10 @@ add_executable(testdirections
         test/testdirections.cpp)
 
 target_link_libraries(testdirections
+        img)
+
+add_executable(testeval
+        test/testeval.cpp)
+
+target_link_libraries(testeval
         img)
