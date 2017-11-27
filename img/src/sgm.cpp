@@ -8,6 +8,7 @@ namespace {
 
 const img::acc_cost_t PENALTY_1 = 15;
 const img::acc_cost_t PENALTY_2 = 100;
+const bool DIVIDE_PENALTY_2 = true;
 
 template<typename T>
 T abs_diff(const T a, const T b) {
@@ -23,9 +24,15 @@ compute_additional_cost(
         const acc_cost_arr_t& previous,
         const std::uint8_t intensity_change) {
 
-    const auto penalty_2_tentative =
-            static_cast<acc_cost_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
-    const auto penalty_2 = std::max(PENALTY_1, penalty_2_tentative);
+    const auto penalty_2 = [&]{
+        if constexpr (DIVIDE_PENALTY_2) {
+            const auto penalty_2_tentative =
+                    static_cast<acc_cost_t>(intensity_change ? PENALTY_2 / intensity_change : PENALTY_2);
+            return std::max(PENALTY_1, penalty_2_tentative);
+        } else {
+            return PENALTY_2;
+        }
+    }();
 
     acc_cost_arr_t additional_costs;
     for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
