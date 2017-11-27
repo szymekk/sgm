@@ -50,7 +50,8 @@ int main(int argc, const char* argv[]) {
             const auto& right_gray = rgb_to_gray_image(maybe_right_rgb.value());
 
 //            const auto costs = img::calculate_costs(left_gray, right_gray, img::sum_of_absolute_differences<3>);
-            const auto costs = img::calculate_costs(left_gray, right_gray, img::pixelwise_absolute_difference);
+//            const auto costs = img::calculate_costs(left_gray, right_gray, img::pixelwise_absolute_difference);
+            const auto costs = img::calculate_costs(left_gray, right_gray, img::rank_transform_based_cost<7>);
 
             img::Grid<img::acc_cost_arr_t> total_costs(left_gray.width, left_gray.height);
             for (const auto [direction, path_function] : path_functions) {

@@ -116,6 +116,63 @@ cost_t sum_of_absolute_differences(const img::ImageGray<std::uint8_t>& left, con
     return static_cast<cost_t>(sum / valid_pixels);
 }
 
+template<std::size_t WINDOW_SIZE>
+cost_t rank_transform_based_cost(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
+                                 const std::size_t row, const std::size_t col, const std::size_t disparity) {
+    static_assert(WINDOW_SIZE > 0, "window size should be positive");
+    static_assert(WINDOW_SIZE % 2 == 1, "window should be symmetrical");
+
+    constexpr auto n = (WINDOW_SIZE - 1) / 2;
+    unsigned int cost = 0;
+    std::size_t valid_pixels = 0;
+
+    static_assert(std::numeric_limits<decltype(cost)>::max() >=
+                  WINDOW_SIZE * WINDOW_SIZE - 1);
+
+    assert(col >= disparity);
+    const std::uint8_t left_middle = left.get(col, row).value;
+    const std::uint8_t right_middle = right.get(col - disparity, row).value;
+
+
+    const std::size_t r_min = (row >= n) ? row - n : 0;
+    const std::size_t r_max = std::clamp<std::size_t>(row + n, 0, left.height - 1);
+
+    const std::size_t c_min = (col >= n) ? col - n : 0;
+    const std::size_t c_max = std::clamp<std::size_t>(col + n, 0, left.width - 1);
+
+    // std::cerr << "r(" << r_min << "-" << r_max << "), c(" << c_min << "-" << c_max << ")\n";
+    cost_t left_rank_transform = 0;
+    cost_t right_rank_transform = 0;
+    for (std::size_t r = r_min; r <= r_max; ++r) {
+        for (std::size_t c = c_min; c <= c_max; ++c) {
+            if (r < left.height && c < left.width && c >= disparity) { // r, c always >= 0 (unsigned)
+                ++valid_pixels;
+                if (left.get(c, r).value < left_middle) {
+                    ++left_rank_transform;
+                }
+                if (right.get(c - disparity, r).value < right_middle) {
+                    ++right_rank_transform;
+                }
+            } else {
+                // std::cerr << "invalid pixel: "
+                // << "row: " << row
+                // << ", col: " << col
+                // << ", disparity: " << disparity
+                // << "\n";
+            }
+        }
+    }
+    if (0 == valid_pixels) {
+        std::cerr
+                << "row: " << row
+                << ", col: " << col
+                << ", disparity: " << disparity
+                << "\n";
+    }
+    assert(valid_pixels > 0);
+    return abs_diff(left_rank_transform, right_rank_transform);
+}
+
 // todo: add different cost functions
 img::Grid<cost_arr_t>
 calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
@@ -283,7 +340,8 @@ ImageGray<std::uint8_t>
 semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::uint8_t>& right) {
 
     // const auto costs = calculate_costs(left, right, pixelwise_absolute_difference);
-    const auto costs = calculate_costs(left, right, sum_of_absolute_differences<3>);
+    // const auto costs = calculate_costs(left, right, sum_of_absolute_differences<3>);
+    const auto costs = calculate_costs(left, right, rank_transform_based_cost<7>);
     const auto accumulated_costs_x1_y0 = accumulate_costs_direction_x1_y0(left, costs);
 
     //todo: accumulate costs along other directions and sum all costs
