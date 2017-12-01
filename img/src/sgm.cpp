@@ -34,7 +34,7 @@ compute_additional_cost(
         }
     }();
 
-    acc_cost_arr_t additional_costs;
+    acc_cost_arr_t additional_costs{};
     for (std::size_t d = 0; d < MAX_DISPARITY; ++d) {
         auto additional_cost = std::numeric_limits<acc_cost_t>::max();
         for (std::size_t d_p = 0; d_p < MAX_DISPARITY; ++d_p) {
@@ -213,7 +213,7 @@ accumulate_costs_direction_x1_y0(const img::ImageGray<std::uint8_t>& left, const
     // (1) initialize accumulated costs with values from costs
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(accumulated_costs.data),
                    [](const cost_arr_t& cv) {
-                       acc_cost_arr_t acc_cv;
+                       acc_cost_arr_t acc_cv{};
                        std::copy(cv.begin(), cv.end(), std::begin(acc_cv));
                        return acc_cv;
                    });
@@ -257,7 +257,7 @@ accumulate_costs_direction(const img::ImageGray<std::uint8_t>& left, const img::
     // (1) initialize accumulated costs with values from costs
     std::transform(std::cbegin(costs.data), std::cend(costs.data), std::begin(accumulated_costs.data),
                    [](const cost_arr_t& cv) {
-                       acc_cost_arr_t acc_cv;
+                       acc_cost_arr_t acc_cv{};
                        std::copy(cv.begin(), cv.end(), std::begin(acc_cv));
                        return acc_cv;
                    });
