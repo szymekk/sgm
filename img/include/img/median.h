@@ -7,7 +7,14 @@
 
 namespace img {
 
-img::ImageGray<std::uint8_t> median(const img::ImageGray<std::uint8_t>& image);
+enum class BoundaryTreatment {
+    set_to_zero,
+    copy_from_input,
+    zero_pad_input
+};
+
+img::ImageGray<std::uint8_t>
+median(const img::ImageGray<std::uint8_t>& image, BoundaryTreatment boundary_treatment);
 
 }
 

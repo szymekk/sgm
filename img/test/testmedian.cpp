@@ -14,7 +14,7 @@ int main(int argc, const char* argv[]) {
             maybe_gray.has_value()) {
 
             const auto& gray  = maybe_gray.value();
-            const auto filtered_image = img::median(gray);
+            const auto filtered_image = img::median(gray, img::BoundaryTreatment::copy_from_input);
 
             img::write_gray_image_to_pgm(filtered_image, out_filename);
         } else {
@@ -22,7 +22,7 @@ int main(int argc, const char* argv[]) {
             return 1;
         }
     } else {
-        std::cerr << "provide 1 argument\n";
+        std::cerr << "provide 2 arguments\n";
         return 2;
     }
 
