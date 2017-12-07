@@ -47,3 +47,9 @@ add_executable(testmedian
 
 target_link_libraries(testmedian
         img)
+
+add_executable(compare_directions
+        test/compare_directions.cpp)
+
+target_link_libraries(compare_directions
+        img)
