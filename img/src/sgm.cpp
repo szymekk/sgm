@@ -10,6 +10,8 @@ const img::acc_cost_t PENALTY_1 = 15;
 const img::acc_cost_t PENALTY_2 = 100;
 const bool DIVIDE_PENALTY_2 = true;
 
+const img::cost_t TRUNCATE_THRESHOLD = 64 - 1;
+
 template<typename T>
 T abs_diff(const T a, const T b) {
     return static_cast<T>(a < b ? b - a : a - b);
@@ -64,6 +66,19 @@ pixelwise_absolute_difference(const img::ImageGray<std::uint8_t>& left, const im
         return INVALID_COST;
     } else {
         return abs_diff(left.get(col, row).value, right.get(col - disparity, row).value);
+    }
+}
+
+[[maybe_unused]]
+cost_t
+truncated_pixelwise_absolute_difference(const img::ImageGray<std::uint8_t>& left,
+                                        const img::ImageGray<std::uint8_t>& right,
+                                        const std::size_t row, const std::size_t col, const std::size_t disparity) {
+    if (col < disparity) {
+        return INVALID_COST;
+    } else {
+        const auto absolute_difference = pixelwise_absolute_difference(left, right, row, col, disparity);
+        return std::min<cost_t>(absolute_difference, TRUNCATE_THRESHOLD);
     }
 }
 

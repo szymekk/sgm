@@ -11,8 +11,8 @@ namespace {
 
 using fun_t =
 img::ImageGray<std::uint8_t>(
-    const img::ImageGray<std::uint8_t>& left,
-    const img::Grid<img::cost_arr_t>& costs);
+        const img::ImageGray<std::uint8_t>& left,
+        const img::Grid<img::cost_arr_t>& costs);
 
 using acc_fun_t =
 img::Grid<img::acc_cost_arr_t>(
@@ -51,7 +51,8 @@ int main(int argc, const char* argv[]) {
 
 //            const auto costs = img::calculate_costs(left_gray, right_gray, img::sum_of_absolute_differences<3>);
 //            const auto costs = img::calculate_costs(left_gray, right_gray, img::pixelwise_absolute_difference);
-            const auto costs = img::calculate_costs(left_gray, right_gray, img::rank_transform_based_cost<7>);
+            const auto costs = img::calculate_costs(left_gray, right_gray, img::truncated_pixelwise_absolute_difference);
+//            const auto costs = img::calculate_costs(left_gray, right_gray, img::rank_transform_based_cost<7>);
             const auto& naive_disparity = img::create_disparity_view(costs);
             const std::string out_cost_filename = out_basename + "_naive" + ".pgm";
             std::cout << "saving disparity image to: " << out_cost_filename << "\n";

@@ -17,6 +17,7 @@ std::size_t index_of_min_element(const ContainerT& c) {
 } // namespace detail
 
 inline const std::size_t MAX_DISPARITY = 64;
+//inline const std::size_t MAX_DISPARITY = 32;
 
 using cost_t = std::uint8_t;
 using cost_arr_t = std::array<cost_t, MAX_DISPARITY>;
@@ -33,6 +34,7 @@ using cost_function_t = cost_t(
         const std::size_t disparity);
 
 cost_function_t pixelwise_absolute_difference;
+cost_function_t truncated_pixelwise_absolute_difference;
 
 template<std::size_t WINDOW_SIZE>
 cost_function_t sum_of_absolute_differences;
@@ -64,6 +66,8 @@ ImageGray<std::uint8_t> create_disparity_view(const img::Grid<CostArrayT>& costs
                        const auto disparity = detail::index_of_min_element(cv);
                        static_assert(MAX_DISPARITY == 64, "can't scale by shifting two bits");
                        const auto scaled_disparity = static_cast<std::uint8_t>(4 * disparity);
+//                       static_assert(MAX_DISPARITY == 32, "can't scale by shifting three bits");
+//                       const auto scaled_disparity = static_cast<std::uint8_t>(8 * disparity);
                        return PixelGray<std::uint8_t>{scaled_disparity};
                    });
     return disparity_view;
