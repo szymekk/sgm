@@ -42,6 +42,9 @@ cost_function_t sum_of_absolute_differences;
 template<std::size_t WINDOW_SIZE>
 cost_function_t rank_transform_based_cost;
 
+template<std::size_t WINDOW_SIZE>
+cost_function_t census_transform_based_cost;
+
 img::Grid<cost_arr_t>
 calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
                 cost_function_t cost_function);

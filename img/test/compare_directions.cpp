@@ -57,8 +57,9 @@ int main(int argc, const char* argv[]) {
 
 //            const auto costs = img::calculate_costs(left_gray, right_gray, img::sum_of_absolute_differences<3>);
 //            const auto costs = img::calculate_costs(left_gray, right_gray, img::pixelwise_absolute_difference);
-            const auto costs = img::calculate_costs(left_gray, right_gray, img::truncated_pixelwise_absolute_difference);
+//            const auto costs = img::calculate_costs(left_gray, right_gray, img::truncated_pixelwise_absolute_difference);
 //            const auto costs = img::calculate_costs(left_gray, right_gray, img::rank_transform_based_cost<7>);
+            const auto costs = img::calculate_costs(left_gray, right_gray, img::census_transform_based_cost<7>);
 
             const auto& naive_disparity = img::create_disparity_view(costs);
 

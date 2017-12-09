@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <iostream>
+#include <numeric>
 
 #include "img/fileio.h"
 #include "img/sgm.h"
@@ -188,6 +189,54 @@ cost_t rank_transform_based_cost(const img::ImageGray<std::uint8_t>& left, const
     return abs_diff(left_rank_transform, right_rank_transform);
 }
 
+template<std::size_t WINDOW_SIZE>
+cost_t census_transform_based_cost(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
+                                   const std::size_t row, const std::size_t col, const std::size_t disparity) {
+    static_assert(WINDOW_SIZE > 0, "window size should be positive");
+    static_assert(WINDOW_SIZE % 2 == 1, "window should be symmetrical");
+    assert(col >= disparity);
+
+    const auto last_col = static_cast<int>(left.width - 1);
+    const auto last_row = static_cast<int>(left.height- 1);
+    const auto is_valid_coordinate = [last_col, last_row](const auto c, const auto r) {
+        return (0 <= r && r <= last_row) && (0 <= c && c <= last_col);
+    };
+
+    const auto get_value = [](const auto& img, const auto c, const auto r) {
+        return img.get(static_cast<std::size_t>(c), static_cast<std::size_t>(r)).value;
+    };
+
+    using census_t = std::array<bool, WINDOW_SIZE*WINDOW_SIZE>;
+    constexpr auto n = (WINDOW_SIZE - 1) / 2;
+    const auto census = [n, is_valid_coordinate, get_value](const auto& img, const auto c, const auto r) -> census_t {
+        census_t result{};
+        const std::uint8_t middle = img.get(c, r).value;
+        auto it = std::begin(result);
+        const auto row_min = static_cast<int>(r - n);
+        const auto row_max = static_cast<int>(r + n);
+        const auto col_min = static_cast<int>(c - n);
+        const auto col_max = static_cast<int>(c + n);
+        for (int i = row_min; i <= row_max; ++i) {
+            for (int j = col_min; j <= col_max; ++j) {
+                if (is_valid_coordinate(j, i)) {
+                    const auto current = get_value(img, j, i);
+                    *it = (current < middle);
+                }
+                ++it;
+            }
+        }
+        assert(std::end(result) == it);
+        return result;
+    };
+
+    const auto census_left  = census(left, col, row);
+    const auto census_right = census(right, col - disparity, row);
+
+    const auto hamming_distance = std::inner_product(std::begin(census_left), std::end(census_left),
+                                                     std::begin(census_right), 0, std::plus<>(), std::not_equal_to<>());
+    return static_cast<cost_t>(hamming_distance);
+}
+
 // todo: add different cost functions
 img::Grid<cost_arr_t>
 calculate_costs(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
@@ -356,7 +405,8 @@ semi_global_matching(const ImageGray<std::uint8_t>& left, const ImageGray<std::u
 
     // const auto costs = calculate_costs(left, right, pixelwise_absolute_difference);
     // const auto costs = calculate_costs(left, right, sum_of_absolute_differences<3>);
-    const auto costs = calculate_costs(left, right, rank_transform_based_cost<7>);
+    // const auto costs = calculate_costs(left, right, rank_transform_based_cost<7>);
+    const auto costs = calculate_costs(left, right, census_transform_based_cost<7>);
     const auto accumulated_costs_x1_y0 = accumulate_costs_direction_x1_y0(left, costs);
 
     //todo: accumulate costs along other directions and sum all costs
