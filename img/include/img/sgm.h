@@ -40,6 +40,9 @@ template<std::size_t WINDOW_SIZE>
 cost_function_t sum_of_absolute_differences;
 
 template<std::size_t WINDOW_SIZE>
+cost_function_t zero_mean_sum_of_absolute_differences;
+
+template<std::size_t WINDOW_SIZE>
 cost_function_t rank_transform_based_cost;
 
 template<std::size_t WINDOW_SIZE>

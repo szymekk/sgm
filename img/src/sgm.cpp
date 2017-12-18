@@ -133,6 +133,60 @@ cost_t sum_of_absolute_differences(const img::ImageGray<std::uint8_t>& left, con
 }
 
 template<std::size_t WINDOW_SIZE>
+cost_t zero_mean_sum_of_absolute_differences(const img::ImageGray<std::uint8_t>& left,
+                                             const img::ImageGray<std::uint8_t>& right,
+                                             const std::size_t row, const std::size_t col,
+                                             const std::size_t disparity) {
+    static_assert(WINDOW_SIZE > 0, "window size should be positive");
+    static_assert(WINDOW_SIZE % 2 == 1, "window should be symmetrical");
+
+    constexpr auto n = (WINDOW_SIZE - 1) / 2;
+    using sum_t = float;
+    using fraction_t = float;
+    sum_t zero_mean_sum = 0;
+    unsigned int valid_pixels = 0;
+
+    static_assert(
+            std::numeric_limits<decltype(zero_mean_sum)>::max() >=
+            WINDOW_SIZE * WINDOW_SIZE * std::numeric_limits<cost_t>::max());
+
+
+    const std::size_t r_min = (row >= n) ? row - n : 0;
+    const std::size_t r_max = std::clamp<std::size_t>(row + n, 0, left.height - 1);
+
+    const std::size_t c_min = (col >= n) ? col - n : 0;
+    const std::size_t c_max = std::clamp<std::size_t>(col + n, 0, left.width - 1);
+
+    sum_t sum_left = 0;
+    sum_t sum_right = 0;
+    for (std::size_t r = r_min; r <= r_max; ++r) {
+        for (std::size_t c = c_min; c <= c_max; ++c) {
+            if (r < left.height && c < left.width && c >= disparity) { // r, c always >= 0 (unsigned)
+                ++valid_pixels;
+                sum_left  += left.get(c, r).value;
+                sum_right += right.get(c - disparity, r).value;
+            } else {
+            }
+        }
+    }
+    const fraction_t mean_left  = static_cast<fraction_t>(sum_left) / static_cast<fraction_t>(valid_pixels);
+    const fraction_t mean_right = static_cast<fraction_t>(sum_right) / static_cast<fraction_t>(valid_pixels);
+    for (std::size_t r = r_min; r <= r_max; ++r) {
+        for (std::size_t c = c_min; c <= c_max; ++c) {
+            if (r < left.height && c < left.width && c >= disparity) { // r, c always >= 0 (unsigned)
+//                ++valid_pixels;
+                const fraction_t term_one = left.get(c, r).value + mean_right;
+                const fraction_t term_two = right.get(c - disparity, r).value + mean_left;
+                zero_mean_sum += abs_diff(term_one, term_two);
+            } else {
+            }
+        }
+    }
+    assert(valid_pixels > 0);
+    return static_cast<cost_t>(zero_mean_sum / static_cast<fraction_t>(valid_pixels));
+}
+
+template<std::size_t WINDOW_SIZE>
 cost_t rank_transform_based_cost(const img::ImageGray<std::uint8_t>& left, const img::ImageGray<std::uint8_t>& right,
                                  const std::size_t row, const std::size_t col, const std::size_t disparity) {
     static_assert(WINDOW_SIZE > 0, "window size should be positive");
@@ -398,6 +452,7 @@ template img::Grid<acc_cost_arr_t> accumulate_costs_direction<+1,  0>(const img:
 template img::Grid<acc_cost_arr_t> accumulate_costs_direction<+1, +1>(const img::ImageGray<std::uint8_t>& left, const img::Grid<cost_arr_t>& costs);
 
 template cost_function_t sum_of_absolute_differences<7>; // explicit instantiation
+template cost_function_t zero_mean_sum_of_absolute_differences<7>; // explicit instantiation
 template cost_function_t rank_transform_based_cost<7>; // explicit instantiation
 template cost_function_t census_transform_based_cost<7>; // explicit instantiation
 
