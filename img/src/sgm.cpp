@@ -397,6 +397,9 @@ template img::Grid<acc_cost_arr_t> accumulate_costs_direction<+1, -1>(const img:
 template img::Grid<acc_cost_arr_t> accumulate_costs_direction<+1,  0>(const img::ImageGray<std::uint8_t>& left, const img::Grid<cost_arr_t>& costs);
 template img::Grid<acc_cost_arr_t> accumulate_costs_direction<+1, +1>(const img::ImageGray<std::uint8_t>& left, const img::Grid<cost_arr_t>& costs);
 
+template cost_function_t sum_of_absolute_differences<7>; // explicit instantiation
+template cost_function_t rank_transform_based_cost<7>; // explicit instantiation
+template cost_function_t census_transform_based_cost<7>; // explicit instantiation
 
 // returns a disparity image from two rectified grayscale images
 // left image is the base image
