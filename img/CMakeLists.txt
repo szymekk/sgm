@@ -53,3 +53,15 @@ add_executable(compare_directions
 
 target_link_libraries(compare_directions
         img)
+
+add_executable(compare_cost_functions
+        test/compare_cost_functions.cpp)
+
+target_link_libraries(compare_cost_functions
+        img)
+
+add_executable(test_cost_functions
+        test/test_cost_functions.cpp)
+
+target_link_libraries(test_cost_functions
+        img)
